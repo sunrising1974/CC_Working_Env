@@ -47,8 +47,11 @@ bash install.sh
 # 方法 1: 使用 /plugin install 命令（推荐）
 /plugin install .
 
-# 方法 2: 运行安装脚本
+# 方法 2: 运行 PowerShell 安装脚本
 .\install.ps1
+
+# 方法 3: 使用 Node.js 安装脚本
+node scripts/install.js
 ```
 
 ### Linux/Mac (本地开发)
@@ -59,8 +62,9 @@ bash install.sh
 
 # 方法 2: 运行安装脚本
 bash install.sh
-```
-bash install.sh
+
+# 方法 3: 使用 Node.js 安装脚本
+node scripts/install.js
 ```
 
 ## 状态栏显示

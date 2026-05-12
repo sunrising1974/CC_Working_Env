@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build output (will be rebuilt on install)
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.temp
+
+# Test coverage
+coverage/
+
+# Plugin install artifacts (keep scripts, not installed copies)
+*.ps1.rej
+*.sh.rej

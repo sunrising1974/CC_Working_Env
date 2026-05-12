@@ -1,0 +1,136 @@
+{
+  "id": "cc-working-env",
+  "name": "CC_Working_Env",
+  "displayName": "CC Working Env",
+  "version": "1.0.0",
+  "description": "Claude Code 状态栏插件 - 显示当前模型、上下文占用率、Token 消耗、调用次数、Skill 和 Agent 使用情况",
+  "longDescription": "CC_Working_Env 是一个轻量级的 Claude Code 状态栏插件，实时显示：\n- 📊 当前使用的模型\n- 🧠 上下文占用率（会话 token 占模型上下文窗口百分比）\n- 💰 Token 消耗总数（输入 + 输出）\n- 🔢 API 调用总次数\n- 🔧 当前正在使用的 Skill\n- 🤖 当前正在调用的 Agent\n\n支持命令行工具查看详细统计和使用历史记录。",
+  "author": {
+    "name": "Administrator",
+    "email": ""
+  },
+  "license": "MIT",
+  "homepage": "",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "status-line",
+    "model-stats",
+    "token-tracker",
+    "skill-tracker",
+    "agent-tracker",
+    "workspace",
+    "productivity"
+  ],
+  "engines": {
+    "claude-code": ">=1.0.0",
+    "node": ">=18.0.0"
+  },
+  "install": {
+    "command": "node scripts/install.js",
+    "preInstall": "npm install && npm run build",
+    "postInstall": "echo 'Plugin installed successfully. Please restart Claude Code.'"
+  },
+  "uninstall": {
+    "command": "node scripts/uninstall.js"
+  },
+  "activationEvents": [
+    "onStartup",
+    "onCommand:cc-working-env.status",
+    "onCommand:cc-working-env.show",
+    "onCommand:cc-working-env.reset"
+  ],
+  "commands": [
+    {
+      "command": "cc-working-env.status",
+      "title": "Show Status",
+      "description": "显示当前工作环境状态（简洁模式）",
+      "handler": "dist/index.js"
+    },
+    {
+      "command": "cc-working-env.show",
+      "title": "Show Detailed Stats",
+      "description": "显示详细统计信息（含 Skill/Agent 使用历史）",
+      "handler": "dist/cli.js show"
+    },
+    {
+      "command": "cc-working-env.reset",
+      "title": "Reset Statistics",
+      "description": "重置所有统计数据",
+      "handler": "dist/cli.js reset"
+    },
+    {
+      "command": "cc-working-env.clear",
+      "title": "Clear Current Context",
+      "description": "清除当前 Skill/Agent（不重置统计）",
+      "handler": "dist/cli.js clear"
+    }
+  ],
+  "configuration": {
+    "properties": {
+      "ccWorkingEnv.updateInterval": {
+        "type": "number",
+        "default": 3000,
+        "description": "状态栏更新间隔（毫秒）"
+      },
+      "ccWorkingEnv.autoTrackSkills": {
+        "type": "boolean",
+        "default": true,
+        "description": "自动追踪 Skill 使用"
+      },
+      "ccWorkingEnv.autoTrackAgents": {
+        "type": "boolean",
+        "default": true,
+        "description": "自动追踪 Agent 调用"
+      }
+    }
+  },
+  "hooks": {
+    "statusLine": {
+      "command": "node {{PLUGIN_DIR}}/dist/index.js",
+      "interval": 3000
+    },
+    "PostToolUse": [
+      {
+        "matcher": "Skill",
+        "command": "node {{PLUGIN_DIR}}/dist/cli.js skill \"${TOOL_NAME}\"",
+        "description": "Track Skill usage"
+      },
+      {
+        "matcher": "Agent",
+        "command": "node {{PLUGIN_DIR}}/dist/cli.js agent \"${TOOL_NAME:-general-purpose}\"",
+        "description": "Track Agent calls"
+      }
+    ],
+    "Stop": [
+      {
+        "command": "node {{PLUGIN_DIR}}/dist/cli.js clear",
+        "description": "Clear current Skill/Agent on session end"
+      }
+    ]
+  },
+  "permissions": [
+    "read:env",
+    "write:plugin_storage",
+    "execute:node"
+  ],
+  "files": {
+    "include": [
+      "dist/**/*",
+      "scripts/**/*",
+      "package.json",
+      "plugin.json",
+      "README.md",
+      "LICENSE"
+    ],
+    "exclude": [
+      "node_modules/**/*",
+      "src/**/*",
+      "*.ts",
+      ".gitignore",
+      "tsconfig.json"
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "name": "cc-working-env",
+  "version": "1.0.0",
+  "description": "CC_Working_Env - Claude Code 插件，显示当前模型、上下文占用率、Token 消耗、调用次数、Skill 和 Agent 使用情况",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "cc-working-env": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "install": "node scripts/install.js",
+    "uninstall": "node scripts/uninstall.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  },
+  "plugin": {
+    "name": "CC_Working_Env",
+    "displayName": "CC Working Env",
+    "version": "1.0.0",
+    "description": "显示当前模型、上下文占用率、Token 消耗、调用次数、Skill 和 Agent 使用情况",
+    "author": "Administrator",
+    "homepage": "https://github.com/Administrator/CC_Working_Env",
+    "commands": [
+      {
+        "name": "status",
+        "description": "显示当前工作环境状态",
+        "handler": "dist/index.js"
+      },
+      {
+        "name": "show",
+        "description": "显示详细统计信息",
+        "handler": "dist/cli.js show"
+      },
+      {
+        "name": "reset",
+        "description": "重置统计数据",
+        "handler": "dist/cli.js reset"
+      }
+    ],
+    "hooks": {
+      "statusLine": {
+        "command": "node {{PLUGIN_DIR}}/dist/index.js",
+        "interval": 3000
+      }
+    },
+    "permissions": [
+      "read:env",
+      "write:plugin_storage"
+    ]
+  }
+}

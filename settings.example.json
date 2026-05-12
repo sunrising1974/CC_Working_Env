@@ -1,0 +1,30 @@
+{
+  "model": "sonnet",
+  "theme": {
+    "mode": "dark"
+  },
+  "statusLine": {
+    "command": "node C:/Users/Administrator/.claude/plugins/modelstats/dist/index.js",
+    "interval": 5000
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Skill",
+        "command": "node C:/Users/Administrator/.claude/plugins/modelstats/dist/cli.js skill \"$TOOL_NAME\"",
+        "description": "Track Skill usage"
+      },
+      {
+        "matcher": "Agent",
+        "command": "node C:/Users/Administrator/.claude/plugins/modelstats/dist/cli.js agent \"$(echo \"$TOOL_INPUT\" | grep -oP 'subagent_type[:\\s]+\\K\\w+' || echo 'general-purpose')\"",
+        "description": "Track Agent calls"
+      }
+    ],
+    "Stop": [
+      {
+        "command": "node C:/Users/Administrator/.claude/plugins/modelstats/dist/cli.js clear",
+        "description": "Clear current Skill/Agent on session end"
+      }
+    ]
+  }
+}

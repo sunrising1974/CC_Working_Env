@@ -6,14 +6,15 @@
   "description": "Claude Code 状态栏插件 - 显示当前模型、上下文占用率、Token 消耗、调用次数、Skill 和 Agent 使用情况",
   "longDescription": "CC_Working_Env 是一个轻量级的 Claude Code 状态栏插件，实时显示：\n- 📊 当前使用的模型\n- 🧠 上下文占用率（会话 token 占模型上下文窗口百分比）\n- 💰 Token 消耗总数（输入 + 输出）\n- 🔢 API 调用总次数\n- 🔧 当前正在使用的 Skill\n- 🤖 当前正在调用的 Agent\n\n支持命令行工具查看详细统计和使用历史记录。",
   "author": {
-    "name": "Administrator",
-    "email": ""
+    "name": "sunrising1974",
+    "email": "",
+    "url": "https://github.com/sunrising1974"
   },
   "license": "MIT",
-  "homepage": "",
+  "homepage": "https://github.com/sunrising1974/CC_Working_Env",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/sunrising1974/CC_Working_Env.git"
   },
   "keywords": [
     "status-line",

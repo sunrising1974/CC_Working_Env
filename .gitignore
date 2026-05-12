@@ -35,3 +35,6 @@ coverage/
 # Plugin install artifacts (keep scripts, not installed copies)
 *.ps1.rej
 *.sh.rej
+
+# Plugin marketplace metadata (generated during install)
+.claude-plugin/

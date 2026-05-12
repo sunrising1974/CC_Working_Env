@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf C:/Users/Administrator/.claude/plugins/cc-working-env)",
+      "Bash(mkdir -p C:/Users/Administrator/.claude/plugins/cc-working-env)",
+      "Bash(node *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(npm run *)",
+      "Bash(cp F:/ClaudecodeStatusBar/dist/index.js C:/Users/Administrator/.claude/plugins/cc-working-env/dist/)",
+      "Bash(cp F:/ClaudecodeStatusBar/dist/cli.js C:/Users/Administrator/.claude/plugins/cc-working-env/dist/)"
+    ]
+  }
+}

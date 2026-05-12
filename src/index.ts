@@ -322,7 +322,8 @@ function formatContextPercentage(sessionTokens: number, model: string): string {
  */
 function generateStatusLine(): string {
   const stats = loadStats();
-  const model = stats.currentModel || '未知';
+  // Always get current model from environment to reflect real-time usage
+  const model = getModelFromEnv();
   const tokens = formatTokens(stats.totalTokens);
   const calls = stats.callCount;
   const sessionTokens = stats.sessionInputTokens + stats.sessionOutputTokens;
@@ -340,7 +341,8 @@ function generateStatusLine(): string {
 function generateDetailedStatus(): string {
   const stats = loadStats();
   const sessionState = loadSessionState();
-  const model = stats.currentModel || '未知';
+  // Always get current model from environment to reflect real-time usage
+  const model = getModelFromEnv();
   const contextSize = getContextWindowSize(model);
   const sessionTokens = stats.sessionInputTokens + stats.sessionOutputTokens;
   const contextUsage = calculateContextUsage(sessionTokens, model);

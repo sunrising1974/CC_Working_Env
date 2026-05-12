@@ -98,12 +98,19 @@ switch (command) {
   case 'show': {
     const stats = loadStats();
     const sessionState = loadSessionState();
+    // Always get current model from environment to reflect real-time usage
+    const getModelFromEnv = (): string => {
+      if (process.env.ANTHROPIC_MODEL) return process.env.ANTHROPIC_MODEL;
+      if (process.env.MODEL) return process.env.MODEL;
+      return 'Unknown';
+    };
+    const model = getModelFromEnv();
     const sessionTokens = stats.sessionInputTokens + stats.sessionOutputTokens;
-    const contextSize = getContextWindowSize(stats.currentModel);
+    const contextSize = getContextWindowSize(model);
     const contextPct = ((sessionTokens / contextSize) * 100).toFixed(1);
 
     console.log('=== Model Statistics ===');
-    console.log(`当前模型：${stats.currentModel}`);
+    console.log(`当前模型：${model}`);
     console.log(`上下文窗口：${(contextSize / 1000).toFixed(0)}K tokens`);
     console.log(`会话输入:${formatTokens(stats.sessionInputTokens)} tokens`);
     console.log(`会话输出：${formatTokens(stats.sessionOutputTokens)} tokens`);

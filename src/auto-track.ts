@@ -1,151 +1,277 @@
 #!/usr/bin/env node
-
 /**
  * Auto-stats hook - Automatically update stats after Claude API calls
  *
- * This hook can be configured in settings.json to automatically track
- * API usage, Skill usage, and Agent calls by parsing the response headers.
+ * This module provides hook handlers for:
+ * - API call token tracking
+ * - Skill usage tracking
+ * - Agent invocation tracking
  */
 
-import { loadStats, saveStats, updateStats, setCurrentSkill, setCurrentAgent } from './index.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Hook configuration
 const config = {
-  // Enable/disable auto-tracking
-  enabled: true,
+    // Enable/disable auto-tracking
+    enabled: true,
 
-  // Log verbose output
-  verbose: false,
+    // Log verbose output
+    verbose: false,
 };
 
-/**
- * Parse token usage from response headers or body
- */
-function parseTokenUsage(headers: Record<string, string>, responseBody?: any): { input?: number; output?: number; total?: number } {
-  const usage: { input?: number; output?: number; total?: number } = {};
+// Import stats handling functions
+import { loadStats, saveStats } from './index.js';
 
-  // Try to get from response body (Claude API format)
-  if (responseBody && responseBody.usage) {
-    usage.input = responseBody.usage.input_tokens || 0;
-    usage.output = responseBody.usage.output_tokens || 0;
-    usage.total = (usage.input || 0) + (usage.output || 0);
-  }
+interface TokenUsage {
+    input?: number;
+    output?: number;
+    cacheRead?: number;
+    cacheCreation?: number;
+}
 
-  return usage;
+interface CostTrackerPayload {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+    model?: string;
+    web_search_rpm?: number;
 }
 
 /**
- * Extract Skill name from command/request
+ * Parse token usage from server response
  */
-function extractSkillFromCommand(command: string): string | undefined {
-  // Pattern for /skill-name commands
-  const skillMatch = command.match(/^\/(\w+)$/);
-  if (skillMatch) {
-    return skillMatch[1];
-  }
+export function parseTokenUsage(responseData: any): TokenUsage {
+    const result: TokenUsage = {};
 
-  // Pattern for "Use <skill>" mentions
-  const skillMention = command.match(/(?:use|run|call)\s+(?:the\s+)?(\w+)(?:\s+skill)?/i);
-  if (skillMention) {
-    return skillMention[1];
-  }
+    try {
+        if (responseData && typeof responseData === 'object') {
+            // Claude API response format
+            if (responseData.usage) {
+                result.input = responseData.usage.input_tokens;
+                result.output = responseData.usage.output_tokens;
+                result.cacheRead = responseData.usage.cache_read_input_tokens;
+                result.cacheCreation = responseData.usage.cache_creation_input_tokens;
+            }
+            // Hook data format
+            else if (responseData.input_tokens !== undefined && responseData.output_tokens !== undefined) {
+                result.input = responseData.input_tokens;
+                result.output = responseData.output_tokens;
+                result.cacheRead = responseData.cache_read_input_tokens;
+                result.cacheCreation = responseData.cache_creation_input_tokens;
+            }
+        }
+    } catch (error) {
+        console.error('[autotrack] Error parsing token usage:', error);
+    }
 
-  return undefined;
+    return result;
 }
 
 /**
- * Extract Agent name from request/tool call
- */
-function extractAgentFromRequest(request: any): string | undefined {
-  // Check for agent type in tool calls
-  if (request.tool?.agent?.subagent_type) {
-    return request.tool.agent.subagent_type;
-  }
-
-  // Check for Agent tool usage
-  if (request.tool?.name === 'Agent') {
-    const subagentType = request.tool.params?.subagent_type || request.tool.prompt?.match(/agent type[:\s]+(\w+)/)?.[1];
-    return subagentType || 'agent';
-  }
-
-  return undefined;
-}
-
-/**
- * Handle a completed API call
+ * Update stats with new API call data
  */
 export function handleApiCall(inputTokens?: number, outputTokens?: number, model?: string): void {
-  if (!config.enabled) {
-    return;
-  }
+    if (!config.enabled) return;
 
-  const stats = updateStats(inputTokens, outputTokens, model);
+    try {
+        const stats = loadStats();
 
-  if (config.verbose) {
-    const totalTokens = (inputTokens || 0) + (outputTokens || 0);
-    console.log(`[modelstats] Updated: ${model || 'default'} | +${totalTokens} tokens | Total: ${stats.totalTokens} | Calls: ${stats.callCount}`);
-  }
+        // Increment call count
+        stats.callCount += 1;
+
+        // Add token usage
+        stats.totalTokens += (inputTokens || 0) + (outputTokens || 0);
+        stats.sessionInputTokens += inputTokens || 0;
+        stats.sessionOutputTokens += outputTokens || 0;
+
+        // Update current model
+        if (model) {
+            stats.currentModel = model;
+        }
+
+        saveStats(stats);
+
+        if (config.verbose) {
+            const displayTokens = ((inputTokens || 0) + (outputTokens || 0));
+            console.log(`[modelstats] API call: ${displayTokens} tokens (${inputTokens || 0} in + ${outputTokens || 0} out)`);
+            if (model) {
+                console.log(`             Model: ${model}`);
+            }
+        }
+    } catch (error) {
+        console.error('[autotrack] Error updating stats:', error);
+    }
 }
 
 /**
- * Handle Skill usage
+ * Track Skill usage
  */
 export function handleSkillUsage(skillName: string): void {
-  if (!config.enabled) {
-    return;
-  }
+    if (!config.enabled) return;
 
-  const stats = setCurrentSkill(skillName);
+    try {
+        const stats = loadStats();
+        stats.currentSkill = skillName;
+        saveStats(stats);
 
-  if (config.verbose) {
-    console.log(`[modelstats] Skill active: ${skillName}`);
-  }
+        // Track usage count in session state
+        const sessionState = loadSessionState();
+        sessionState.skillUsage[skillName] = (sessionState.skillUsage[skillName] || 0) + 1;
+        saveSessionState(sessionState);
+
+        if (config.verbose) {
+            console.log(`[modelstats] Active Skill: ${skillName}`);
+        }
+    } catch (error) {
+        console.error('[autotrack] Error updating skill:', error);
+    }
 }
 
 /**
- * Handle Agent call
+ * Track Agent call
  */
 export function handleAgentCall(agentName: string): void {
-  if (!config.enabled) {
-    return;
-  }
+    if (!config.enabled) return;
 
-  const stats = setCurrentAgent(agentName);
+    try {
+        const stats = loadStats();
+        stats.currentAgent = agentName;
+        saveStats(stats);
 
-  if (config.verbose) {
-    console.log(`[modelstats] Agent called: ${agentName}`);
-  }
+        // Track usage count in session state
+        const sessionState = loadSessionState();
+        sessionState.agentUsage[agentName] = (sessionState.agentUsage[agentName] || 0) + 1;
+        saveSessionState(sessionState);
+
+        if (config.verbose) {
+            console.log(`[modelstats] Active Agent: ${agentName}`);
+        }
+    } catch (error) {
+        console.error('[autotrack] Error updating agent:', error);
+    }
 }
 
 /**
- * Reset current Skill/Agent when session ends or changes
+ * Handle cost-tracker hook data
+ */
+export function handleCostTrackerHook(payload: CostTrackerPayload): void {
+    if (!config.enabled) return;
+
+    // Extract data from hook payload
+    const input = payload.input_tokens || 0;
+    const output = payload.output_tokens || 0;
+    const cacheRead = payload.cache_read_input_tokens || 0;
+    const cacheCreation = payload.cache_creation_input_tokens || 0;
+    const model = payload.model;
+
+    // Update token usage statistics
+    handleApiCall(input, output, model);
+
+    if (config.verbose && (input > 0 || output > 0)) {
+        const total = input + output;
+        const cacheTotal = cacheRead + cacheCreation;
+        console.log(`[modelstats] Tokens: ${total} (${input} in + ${output} out)`);
+        if (cacheTotal > 0) {
+            console.log(`             Cache: ${cacheTotal} tokens`);
+        }
+        if (model) {
+            console.log(`             Model: ${model}`);
+        }
+    }
+}
+
+/**
+ * Reset current Skill and Agent
  */
 export function clearCurrentContext(): void {
-  const stats = loadStats();
-  stats.currentSkill = undefined;
-  stats.currentAgent = undefined;
-  saveStats(stats);
+    if (!config.enabled) return;
 
-  if (config.verbose) {
-    console.log('[modelstats] Cleared current context');
-  }
+    try {
+        const stats = loadStats();
+        stats.currentSkill = undefined;
+        stats.currentAgent = undefined;
+        saveStats(stats);
+
+        if (config.verbose) {
+            console.log('[modelstats] Cleared current context');
+        }
+    } catch (error) {
+        console.error('[autotrack] Error clearing context:', error);
+    }
 }
 
 /**
- * Register hooks with Claude Code (if available)
+ * Load session state with error handling
  */
-export function registerHooks(): void {
-  console.log('[modelstats] Auto-tracking ready');
-  console.log('[modelstats] Use handleSkillUsage() and handleAgentCall() to track activity');
+function loadSessionState(): {
+    currentSkill?: string;
+    currentAgent?: string;
+    skillUsage: Record<string, number>;
+    agentUsage: Record<string, number>;
+} {
+    try {
+        const sessionFile = path.join(
+            process.env.CLAUDE_CONFIG_DIR || path.join(process.env.HOME || '', '.claude'),
+            'modelstats-session.json'
+        );
+
+        if (fs.existsSync(sessionFile)) {
+            const data = fs.readFileSync(sessionFile, 'utf-8');
+            return JSON.parse(data);
+        }
+    } catch (error) {
+        console.error('[autotrack] Error loading session state:', error);
+    }
+
+    return {
+        currentSkill: undefined,
+        currentAgent: undefined,
+        skillUsage: {},
+        agentUsage: {},
+    };
 }
 
-// Export for use in hooks
+/**
+ * Save updated session state
+ */
+function saveSessionState(state: {
+    currentSkill?: string;
+    currentAgent?: string;
+    skillUsage: Record<string, number>;
+    agentUsage: Record<string, number>;
+}): void {
+    try {
+        state = state || {};
+        const sessionFile = path.join(
+            process.env.CLAUDE_CONFIG_DIR || path.join(process.env.HOME || '', '.claude'),
+            'modelstats-session.json'
+        );
+        const sessionDir = path.dirname(sessionFile);
+
+        if (!fs.existsSync(sessionDir)) {
+            fs.mkdirSync(sessionDir, { recursive: true });
+        }
+
+        fs.writeFileSync(sessionFile, JSON.stringify(state, null, 2), 'utf-8');
+    } catch (error) {
+        console.error('[autotrack] Error saving session state:', error);
+    }
+}
+
+// Register hooks when module is loaded
+if (config.enabled && config.verbose) {
+    console.log('[modelstats] Auto-tracking module initialized and ready for hook calls');
+}
+
+// Export handlers
 export default {
-  config,
-  parseTokenUsage,
-  handleApiCall,
-  handleSkillUsage,
-  handleAgentCall,
-  clearCurrentContext,
-  registerHooks,
+    config,
+    parseTokenUsage,
+    handleApiCall,
+    handleSkillUsage,
+    handleAgentCall,
+    handleCostTrackerHook,
+    clearCurrentContext,
 };

@@ -109,13 +109,19 @@
       {
         "command": "node {{PLUGIN_DIR}}/dist/cli.js clear",
         "description": "Clear current Skill/Agent on session end"
+      },
+      {
+        "type": "cost-tracker",
+        "command": "node {{PLUGIN_DIR}}/dist/hook-handler.js --hook=cost-tracker "${HOOK_DATA}"",
+        "description": "Track token usage from API calls for real-time display"
       }
     ]
   },
   "permissions": [
     "read:env",
     "write:plugin_storage",
-    "execute:node"
+    "execute:node",
+    "hook:stop"
   ],
   "files": {
     "include": [

@@ -238,17 +238,6 @@ node dist/index.js --detailed
 }
 ```
 
-## 支持的模型
-
-| 模型 | 上下文窗口 |
-|------|-----------|
-| Qwen25 / Modelscope_Qwen25 | 128K |
-| Qwen3 / Modelscope_Qwen3 | 256K |
-| Qwen35 / Modelscope_Qwen35 | 256K |
-| Modelscope_Qwen_Comb | 256K |
-
-插件会自动检测当前使用的模型，支持从环境变量或 settings.json 读取配置。
-
 ## 卸载插件
 
 ### Windows
